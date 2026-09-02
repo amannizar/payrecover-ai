@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PayRecover AI — Payment Detail</title>
+    <link rel="stylesheet" th:href="@{/css/dashboard.css}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="brand"><span class="brand-icon">🛡️</span> PayRecover AI</div>
+        <div class="nav-links">
+            <a href="/">Dashboard</a>
+            <a href="/payments" class="active">Payments</a>
+            <a href="/evaluation">Evaluation</a>
+            <a href="/audit">Audit</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Header -->
+        <div class="page-header">
+            <div>
+                <h1 th:text="${payment.paymentId}">PAY_000000</h1>
+                <p class="subtitle">
+                    ₹<span th:text="${#numbers.formatDecimal(payment.amount, 1, 'COMMA', 0, 'POINT')}">0</span>
+                    &nbsp;·&nbsp;
+                    <span th:text="${payment.failureCode}">FAILURE</span>
+                    &nbsp;·&nbsp;
+                    <span class="badge-failed" th:if="${payment.status == 'FAILED'}">FAILED</span>
+                    <span class="badge-success" th:if="${payment.status == 'RECOVERED'}">RECOVERED</span>
+                </p>
+            </div>
+        </div>
+
+        <div class="detail-grid">
+            <!-- Payment Info Card -->
+            <div class="card">
+                <h3>Payment Details</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Customer</span>
+                        <span class="info-value" th:text="${payment.customerId}">CUST_000</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Method</span>
+                        <span class="info-value" th:text="${payment.paymentMethod}">UPI</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Bank</span>
+                        <span class="info-value" th:text="${payment.bank}">HDFC</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Merchant Category</span>
+                        <span class="info-value" th:text="${payment.merchantCategory}">SaaS</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Failure Category</span>
+                        <span class="info-value">
+                            <span class="badge-temporary" th:if="${payment.failureCategory == 'TEMPORARY'}" th:text="${payment.failureCategory}">TEMP</span>
+                            <span class="badge-customer" th:if="${payment.failureCategory == 'CUSTOMER'}" th:text="${payment.failureCategory}">CUST</span>
+                            <span class="badge-hard" th:if="${payment.failureCategory == 'HARD'}" th:text="${payment.failureCategory}">HARD</span>
+                        </span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Retries</span>
+                        <span class="info-value" th:text="${payment.retryCount} + '/2'">0/2</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Gateway Latency</span>
+                        <span class="info-value" th:text="${payment.gatewayLatencyMs} + 'ms'">0ms</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Customer Success Rate</span>
+                        <span class="info-value" th:text="${#numbers.formatDecimal(payment.customerSuccessRate * 100, 1, 'COMMA', 0, 'POINT')} + '%'">0%</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Location</span>
+                        <span class="info-value" th:text="${payment.locationZone}">Bangalore</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Device</span>
+                        <span class="info-value" th:text="${payment.deviceType} + ' / ' + ${payment.networkType}">Android / 4G</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Analysis Card -->
+            <div class="card">
+                <h3>🤖 AI Analysis</h3>
+                <div id="ai-analysis">
+                    <div class="loading" id="loading-indicator">
+                        <div class="spinner"></div>
+                        <p>Contacting AI engine…</p>
+                    </div>
+                </div>
+
+                <div class="action-section" id="action-section" style="display:none;">
+                    <button class="btn-execute" id="execute-btn" onclick="executeRecovery()">
+                        ⚡ Execute Recovery
+                    </button>
+                    <p class="hint" id="execute-hint">AI will simulate this recovery attempt</p>
+                </div>
+
+                <!-- Execution Result (hidden until executed) -->
+                <div id="execution-result" style="display:none;" class="execution-result">
+                </div>
+            </div>
+        </div>
+
+        <!-- Recovery Timeline -->
+        <div class="card" id="timeline-card" style="display:none;">
+            <h3>📋 Recovery Timeline</h3>
+            <div class="timeline" id="timeline"></div>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+        const paymentId = /*[[${payment.paymentId}]]*/ 'PAY_000000';
+        const paymentStatus = /*[[${payment.status}]]*/ 'FAILED';
+        const paymentAmount = /*[[${payment.amount}]]*/ 0;
+
+        // Fetch AI analysis on page load
+        fetch('/api/recovery/decide/' + paymentId, { method: 'POST' })
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('loading-indicator').style.display = 'none';
+                const el = document.getElementById('ai-analysis');
+
+                let html = '<div class="ai-result">';
+
+                // Diagnosis
+                html += '<div class="ai-diagnosis-section">';
+                html += '<div class="ai-diagnosis-label">AI Diagnosis</div>';
+                html += '<div class="ai-diagnosis-category">' + data.failureCategory + '</div>';
+                html += '</div>';
+
+                // Probability bars
+                html += '<div class="prob-section">';
+                html += '<div class="prob-section-label">Recovery Probability by Action</div>';
+                html += '<div class="prob-bars">';
+                for (const [action, prob] of Object.entries(data.allProbabilities || {})) {
+                    const pct = (prob * 100).toFixed(1);
+                    const isRecommended = action === data.selectedAction;
+                    html += '<div class="prob-row' + (isRecommended ? ' recommended' : '') + '">';
+                    html += '<span class="prob-label">' + action.replace(/_/g, ' ') + '</span>';
+                    html += '<div class="prob-bar-track"><div class="prob-bar-fill' + (isRecommended ? ' prob-bar-rec' : '') + '" style="width:' + pct + '%"></div></div>';
+                    html += '<span class="prob-value">' + pct + '%</span>';
+                    if (isRecommended) html += ' <span class="badge-rec">★ Recommended</span>';
+                    html += '</div>';
+                }
+                html += '</div></div>';
+
+                // Recommendation
+                html += '<div class="recommendation">';
+                if (data.stoppingReason) {
+                    html += '<div class="rec-stop">STOP — ' + data.stoppingReason.replace(/_/g, ' ') + '</div>';
+                    html += '<div class="rec-ev">No recovery attempted</div>';
+                } else {
+                    html += '<div class="rec-label">AI Recommends</div>';
+                    html += '<div class="rec-action">' + data.selectedAction.replace(/_/g, ' ') + '</div>';
+                    html += '<div class="rec-ev">Expected Recovery: ₹' + Math.round(data.expectedRecovery).toLocaleString() + '</div>';
+                }
+                html += '</div></div>';
+
+                el.innerHTML = html;
+
+                // Show execute button only for non-STOP decisions and FAILED payments
+                if (data.selectedAction !== 'STOP' && paymentStatus === 'FAILED') {
+                    document.getElementById('action-section').style.display = 'block';
+                }
+            })
+            .catch(err => {
+                document.getElementById('loading-indicator').innerHTML =
+                    '<p class="error">⚠️ Could not reach AI engine. Make sure FastAPI is running on port 8001.</p>';
+            });
+
+        function executeRecovery() {
+            const btn = document.getElementById('execute-btn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Executing…';
+            document.getElementById('execute-hint').textContent = 'Running simulation…';
+
+            fetch('/api/recovery/execute/' + paymentId, { method: 'POST' })
+                .then(r => r.json())
+                .then(data => {
+                    const isSuccess = data.actualResult === 'SUCCESS';
+
+                    // Hide execute button, show result
+                    document.getElementById('action-section').style.display = 'none';
+                    const resultDiv = document.getElementById('execution-result');
+                    resultDiv.style.display = 'block';
+                    resultDiv.innerHTML =
+                        '<div class="exec-result ' + (isSuccess ? 'exec-success' : 'exec-fail') + '">' +
+                            '<div class="exec-icon">' + (isSuccess ? '✅' : '❌') + '</div>' +
+                            '<div class="exec-title">' + (isSuccess ? 'RECOVERY SUCCESSFUL' : 'RECOVERY FAILED') + '</div>' +
+                            (isSuccess
+                                ? '<div class="exec-amount">₹' + Number(data.actualRecovery).toLocaleString() + ' recovered</div>'
+                                : '<div class="exec-amount">₹0 recovered</div>') +
+                            '<div class="exec-detail">Attempt: ' + (data.retryCount + 1) + ' · Action: ' + data.selectedAction.replace(/_/g, ' ') + '</div>' +
+                        '</div>';
+
+                    // Build timeline
+                    const card = document.getElementById('timeline-card');
+                    card.style.display = 'block';
+                    const timeline = document.getElementById('timeline');
+
+                    let steps = [
+                        { dot: 'tl-dot-start', title: 'Payment Failed', desc: paymentId + ' — ₹' + Number(paymentAmount).toLocaleString() },
+                        { dot: 'tl-dot-diag', title: 'AI Diagnosed', desc: 'Failure category identified' },
+                        { dot: 'tl-dot-action', title: data.selectedAction.replace(/_/g, ' ') + ' Selected', desc: 'Chosen by AI for highest expected value' },
+                        { dot: isSuccess ? 'tl-dot-success' : 'tl-dot-fail', title: isSuccess ? 'Payment Recovered' : 'Recovery Failed', desc: isSuccess ? '₹' + Number(data.actualRecovery).toLocaleString() + ' added to recovered revenue' : 'Attempt did not succeed' }
+                    ];
+
+                    timeline.innerHTML = steps.map(s =>
+                        '<div class="tl-step">' +
+                            '<div class="tl-dot ' + s.dot + '"></div>' +
+                            '<div class="tl-content"><strong>' + s.title + '</strong><br>' + s.desc + '</div>' +
+                        '</div>'
+                    ).join('');
+
+                    // Update header badge
+                    if (isSuccess) {
+                        const badges = document.querySelectorAll('.badge-failed');
+                        badges.forEach(b => { b.className = 'badge-success'; b.textContent = 'RECOVERED'; });
+                    }
+                });
+        }
+    </script>
+</body>
+</html>

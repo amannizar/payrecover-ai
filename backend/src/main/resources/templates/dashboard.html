@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PayRecover AI — Dashboard</title>
+    <link rel="stylesheet" th:href="@{/css/dashboard.css}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="brand">
+            <span class="brand-icon">🛡️</span> PayRecover AI
+        </div>
+        <div class="nav-links">
+            <a href="/" class="active">Dashboard</a>
+            <a href="/payments">Payments</a>
+            <a href="/evaluation">Evaluation</a>
+            <a href="/audit">Audit</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="page-header">
+            <h1>Revenue Recovery Dashboard</h1>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════
+             LIVE SIMULATION — real-time metrics from this session
+             ═══════════════════════════════════════════════════════════════ -->
+        <div class="section-label">
+            <span class="badge">Live Simulation</span>
+            <span class="section-desc">Real-time metrics from this demo session</span>
+        </div>
+
+        <!-- KPI Cards - Revenue focused -->
+        <div class="kpi-grid">
+            <div class="kpi-card kpi-risk">
+                <div class="kpi-icon">⚠️</div>
+                <div class="kpi-body">
+                    <div class="kpi-label">Revenue at Risk</div>
+                    <div class="kpi-value" th:text="'₹' + ${#numbers.formatDecimal(revenueAtRisk, 1, 'COMMA', 0, 'POINT')}">₹0</div>
+                    <div class="kpi-sub" th:text="${totalPayments} + ' payments tracked'">0 payments</div>
+                </div>
+            </div>
+            <div class="kpi-card kpi-recovered">
+                <div class="kpi-icon">💰</div>
+                <div class="kpi-body">
+                    <div class="kpi-label">Revenue Recovered</div>
+                    <div class="kpi-value" th:text="'₹' + ${#numbers.formatDecimal(revenueRecovered, 1, 'COMMA', 0, 'POINT')}">₹0</div>
+                    <div class="kpi-sub" th:text="${totalRecovered} + ' payments recovered'">0 recovered</div>
+                </div>
+            </div>
+            <div class="kpi-card kpi-rate">
+                <div class="kpi-icon">📊</div>
+                <div class="kpi-body">
+                    <div class="kpi-label">Revenue Recovery Rate</div>
+                    <div class="kpi-value" th:text="${revenueRecoveryRate} + '%'">0%</div>
+                    <div class="kpi-sub">of at-risk revenue</div>
+                </div>
+            </div>
+            <div class="kpi-card kpi-action">
+                <div class="kpi-icon">🤖</div>
+                <div class="kpi-body">
+                    <div class="kpi-label">AI Interventions</div>
+                    <div class="kpi-value" th:text="${totalActions}">0</div>
+                    <div class="kpi-sub">recovery actions executed</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════
+             HELD-OUT EVALUATION — controlled benchmark results
+             ═══════════════════════════════════════════════════════════════ -->
+        <div class="section-label" style="margin-top:2rem;">
+            <span class="badge badge-eval">Held-Out Evaluation</span>
+            <span class="section-desc">Controlled benchmark on 1,500 synthetic test payments (separate from live data)</span>
+        </div>
+
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-icon">🧪</div>
+                <div class="kpi-body">
+                    <div class="kpi-label">Test Payments</div>
+                    <div class="kpi-value" style="color:#333;">1,500</div>
+                    <div class="kpi-sub">held-out synthetic dataset</div>
+                </div>
+            </div>
+            <div class="kpi-card kpi-risk">
+                <div class="kpi-icon">⚠️</div>
+                <div class="kpi-body">
+                    <div class="kpi-label">Revenue at Risk</div>
+                    <div class="kpi-value">₹19,16,623</div>
+                    <div class="kpi-sub">total in test set</div>
+                </div>
+            </div>
+            <div class="kpi-card kpi-recovered">
+                <div class="kpi-icon">💰</div>
+                <div class="kpi-body">
+                    <div class="kpi-label">PayRecover AI Recovery</div>
+                    <div class="kpi-value">85.8%</div>
+                    <div class="kpi-sub">revenue recovery rate</div>
+                </div>
+            </div>
+            <div class="kpi-card kpi-rate">
+                <div class="kpi-icon">📈</div>
+                <div class="kpi-body">
+                    <div class="kpi-label">Recovered Revenue</div>
+                    <div class="kpi-value">₹16,44,362</div>
+                    <div class="kpi-sub">of ₹19,16,623 at risk</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Batch Recovery -->
+        <div class="batch-section">
+            <button class="btn-batch" id="batch-btn" onclick="runBatchRecovery()">
+                🚀 Run AI Recovery
+            </button>
+            <span class="batch-hint" id="batch-hint">Process all failed payments through the AI recovery pipeline</span>
+        </div>
+        <div id="batch-results" style="display:none;" class="card batch-results-card">
+            <h3>Batch Recovery Results</h3>
+            <div class="batch-progress" id="batch-progress">
+                <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+                <span id="progress-text">Processing…</span>
+            </div>
+            <div class="batch-summary" id="batch-summary"></div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="charts-row">
+            <div class="chart-card">
+                <h3>Strategy Comparison <span class="chart-note">(Held-Out Evaluation)</span></h3>
+                <canvas id="strategyChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h3>AI Action Distribution <span class="chart-note">(Live Session)</span></h3>
+                <canvas id="actionChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="card" style="margin-top: 1rem;">
+            <h3>Recent Recovery Activity</h3>
+            <table class="data-table" th:if="${recentLogs}">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Payment</th>
+                        <th>Action</th>
+                        <th>Result</th>
+                        <th>Recovered</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="log : ${recentLogs}">
+                        <td th:text="${#temporals.format(log.createdAt, 'HH:mm:ss')}">--:--:--</td>
+                        <td><a th:href="@{/payments/{id}(id=${log.paymentId})}" th:text="${log.paymentId}">PAY_000</a></td>
+                        <td><span class="badge-action" th:text="${log.action}">ACTION</span></td>
+                        <td>
+                            <span class="badge-success" th:if="${log.result == 'SUCCESS'}" th:text="${log.result}">OK</span>
+                            <span class="badge-failed" th:if="${log.result == 'FAILED'}" th:text="${log.result}">FAIL</span>
+                            <span class="badge-stopped" th:if="${log.result == 'STOPPED'}" th:text="${log.result}">STOP</span>
+                        </td>
+                        <td th:text="'₹' + ${#numbers.formatDecimal(log.recoveredAmount, 1, 'COMMA', 0, 'POINT')}">₹0</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p th:unless="${recentLogs}" class="empty-state">No recovery activity yet. Click "Run AI Recovery" above or go to Payments → Analyze → Execute.</p>
+        </div>
+
+        <!-- Dev-only: Demo Reset -->
+        <div th:if="${resetEnabled}" class="card" style="margin-top: 1.5rem; border-left: 4px solid #ef5350;">
+            <h3 style="color: #c62828;">🔧 Development Tools</h3>
+            <p style="color: #666; margin-bottom: 1rem;">Reset the demo database to a clean state. This clears all recovery actions and audit logs, then resets payments to FAILED.</p>
+            <button class="btn-reset" id="reset-btn" onclick="resetDemo()">
+                🔄 Reset Demo Database
+            </button>
+            <span class="batch-hint" id="reset-hint"></span>
+        </div>
+    </div>
+
+    <script>
+        // Strategy comparison chart — post-audit measured results
+        new Chart(document.getElementById('strategyChart'), {
+            type: 'bar',
+            data: {
+                labels: ['No Recovery', 'Blind Retry', 'Rule-Based', 'PayRecover AI'],
+                datasets: [{
+                    label: 'Revenue Recovery %',
+                    data: [0.0, 37.1, 66.6, 85.8],
+                    backgroundColor: ['#e0e0e0', '#90caf9', '#42a5f5', '#1565c0'],
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } }
+                }
+            }
+        });
+
+        // Action distribution chart (from server data)
+        const actionData = /*[[${actionDistribution}]]*/ {};
+        new Chart(document.getElementById('actionChart'), {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(actionData),
+                datasets: [{
+                    data: Object.values(actionData),
+                    backgroundColor: ['#1565c0', '#42a5f5', '#ef5350', '#ffa726', '#66bb6a', '#ab47bc']
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+
+        // Batch recovery
+        function runBatchRecovery() {
+            const btn = document.getElementById('batch-btn');
+            const hint = document.getElementById('batch-hint');
+            btn.disabled = true;
+            btn.textContent = '⏳ Processing…';
+            hint.textContent = 'Running AI recovery on failed payments…';
+
+            const resultsDiv = document.getElementById('batch-results');
+            resultsDiv.style.display = 'block';
+            const fill = document.getElementById('progress-fill');
+            const ptext = document.getElementById('progress-text');
+            fill.style.width = '10%';
+            ptext.textContent = 'Starting batch recovery…';
+
+            fetch('/api/recovery/batch?limit=200', { method: 'POST' })
+                .then(r => r.json())
+                .then(data => {
+                    fill.style.width = '100%';
+                    ptext.textContent = 'Complete!';
+                    fill.classList.add('complete');
+
+                    const summary = document.getElementById('batch-summary');
+                    const recoveryPct = data.recoveryRate || 0;
+                    summary.innerHTML =
+                        '<div class="batch-stats">' +
+                            '<div class="batch-stat"><span class="batch-stat-value">' + data.processed + '</span><span class="batch-stat-label">Processed</span></div>' +
+                            '<div class="batch-stat batch-stat-success"><span class="batch-stat-value">' + data.success + '</span><span class="batch-stat-label">Recovered</span></div>' +
+                            '<div class="batch-stat batch-stat-failed"><span class="batch-stat-value">' + data.failed + '</span><span class="batch-stat-label">Failed</span></div>' +
+                            '<div class="batch-stat batch-stat-stopped"><span class="batch-stat-value">' + data.stopped + '</span><span class="batch-stat-label">Stopped</span></div>' +
+                        '</div>' +
+                        '<div class="batch-revenue">' +
+                            '<div>Revenue Recovered: <strong>₹' + Number(data.totalRecovered).toLocaleString() + '</strong></div>' +
+                            '<div>Recovery Rate: <strong>' + recoveryPct + '%</strong></div>' +
+                        '</div>';
+
+                    btn.textContent = '✅ Batch Complete';
+                    hint.textContent = data.processed + ' payments processed. Refresh to see updated dashboard.';
+                })
+                .catch(err => {
+                    fill.style.width = '100%';
+                    fill.classList.add('error');
+                    ptext.textContent = 'Error: ' + err.message;
+                    btn.textContent = '❌ Failed — Retry';
+                    btn.disabled = false;
+                    hint.textContent = 'Something went wrong. Check that FastAPI is running.';
+                });
+        }
+
+        /* Demo Reset (dev only) */
+        function resetDemo() {
+            const btn = document.getElementById('reset-btn');
+            const hint = document.getElementById('reset-hint');
+            btn.disabled = true;
+            btn.textContent = '⏳ Resetting…';
+            hint.textContent = 'Clearing recovery actions, audit logs, and resetting payments…';
+
+            fetch('/api/demo/reset', { method: 'POST' })
+                .then(r => r.json().then(d => ({ ok: r.ok, data: d })))
+                .then(({ ok, data }) => {
+                    if (!ok) {
+                        btn.textContent = '❌ Reset Failed';
+                        hint.textContent = data.message || data.error || 'Unknown error';
+                        btn.disabled = false;
+                        return;
+                    }
+                    btn.textContent = '✅ Reset Complete';
+                    hint.textContent =
+                        data.paymentsReset + ' payments reset, ' +
+                        data.recoveryActionsDeleted + ' actions cleared, ' +
+                        data.auditLogsDeleted + ' logs cleared. Refreshing…';
+                    setTimeout(() => location.reload(), 1500);
+                })
+                .catch(err => {
+                    btn.textContent = '❌ Reset Failed';
+                    hint.textContent = 'Error: ' + err.message;
+                    btn.disabled = false;
+                });
+        }
+    </script>
+</body>
+</html>

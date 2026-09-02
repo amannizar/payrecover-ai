@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PayRecover AI — Evaluation</title>
+    <link rel="stylesheet" th:href="@{/css/dashboard.css}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="brand"><span class="brand-icon">🛡️</span> PayRecover AI</div>
+        <div class="nav-links">
+            <a href="/">Dashboard</a>
+            <a href="/payments">Payments</a>
+            <a href="/evaluation" class="active">Evaluation</a>
+            <a href="/audit">Audit</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="page-header">
+            <h1>Strategy Evaluation</h1>
+            <span class="badge">Post-Audit Results</span>
+        </div>
+
+        <p class="subtitle">Results measured on <strong>1,500 held-out synthetic test payments</strong>. Total revenue at risk: ₹1,916,623.</p>
+
+        <!-- Comparison Table -->
+        <div class="card">
+            <h3>Strategy Comparison</h3>
+            <table class="data-table eval-table">
+                <thead>
+                    <tr>
+                        <th>Strategy</th>
+                        <th>Recovered Revenue</th>
+                        <th>Revenue Recovery %</th>
+                        <th>Payment Recovery %</th>
+                        <th>Attempts</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>No Recovery</td>
+                        <td>₹0</td>
+                        <td>0.0%</td>
+                        <td>0.0%</td>
+                        <td>1,500</td>
+                    </tr>
+                    <tr>
+                        <td>Blind Retry (1x)</td>
+                        <td>₹711,415</td>
+                        <td>37.1%</td>
+                        <td>38.7%</td>
+                        <td>1,500</td>
+                    </tr>
+                    <tr>
+                        <td>Rule-Based</td>
+                        <td>₹1,276,314</td>
+                        <td>66.6%</td>
+                        <td>67.0%</td>
+                        <td>1,500</td>
+                    </tr>
+                    <tr class="highlight-row">
+                        <td><strong>🛡️ PayRecover AI</strong></td>
+                        <td><strong>₹1,644,362</strong></td>
+                        <td><strong>85.8%</strong></td>
+                        <td><strong>86.2%</strong></td>
+                        <td><strong>2,176</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Improvement Cards -->
+        <div class="kpi-grid" style="margin-top:1.5rem;">
+            <div class="kpi-card kpi-rate">
+                <div class="kpi-body">
+                    <div class="kpi-label">vs Blind Retry</div>
+                    <div class="kpi-value">+131%</div>
+                    <div class="kpi-sub">more revenue recovered</div>
+                </div>
+            </div>
+            <div class="kpi-card kpi-recovered">
+                <div class="kpi-body">
+                    <div class="kpi-label">vs Rule-Based</div>
+                    <div class="kpi-value">+29%</div>
+                    <div class="kpi-sub">more revenue recovered</div>
+                </div>
+            </div>
+            <div class="kpi-card kpi-risk">
+                <div class="kpi-body">
+                    <div class="kpi-label">Revenue Per Intervention</div>
+                    <div class="kpi-value">₹756</div>
+                    <div class="kpi-sub">across 2,176 actions</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="charts-row" style="margin-top:1.5rem;">
+            <div class="chart-card">
+                <h3>Revenue Recovery Comparison</h3>
+                <canvas id="revenueChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h3>AI Action Distribution</h3>
+                <canvas id="actionChart"></canvas>
+            </div>
+        </div>
+
+        <!-- ML Model Performance -->
+        <div class="card" style="margin-top:1.5rem;">
+            <h3>ML Model Performance</h3>
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">Diagnosis Model</span>
+                    <span class="info-value">Random Forest</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Diagnosis F1 (macro)</span>
+                    <span class="info-value">0.9971</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Recovery Model</span>
+                    <span class="info-value">Gradient Boosting Regressor</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Recovery R²</span>
+                    <span class="info-value">0.9998</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Stopping Rules</span>
+                    <span class="info-value">MAX_RETRIES=2, MIN_PROB=0.20, HARD_FAIL=STOP</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Test Set</span>
+                    <span class="info-value">1,500 synthetic payments (held-out)</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cost Efficiency -->
+        <div class="card" style="margin-top:1.5rem;">
+            <h3>Cost Efficiency</h3>
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">Total AI Interventions</span>
+                    <span class="info-value">2,176</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Extra vs Baseline</span>
+                    <span class="info-value">+676 interventions</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Incremental Revenue</span>
+                    <span class="info-value">₹368,048 more than rule-based</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Incremental Per-Action</span>
+                    <span class="info-value">₹544 per extra intervention</span>
+                </div>
+            </div>
+        </div>
+
+        <p class="footnote">
+            ⚠️ These results are from a <strong>synthetic simulation</strong>, not real-world Razorpay data.
+            Recovery probabilities are simulation parameters. We report them honestly as experimental results.
+            <br>Post-audit numbers (v1.1) — bug fix applied: agent now uses diagnosed category consistently.
+        </p>
+    </div>
+
+    <script>
+        new Chart(document.getElementById('revenueChart'), {
+            type: 'bar',
+            data: {
+                labels: ['No Recovery', 'Blind Retry', 'Rule-Based', 'PayRecover AI'],
+                datasets: [{
+                    label: 'Recovered Revenue (₹)',
+                    data: [0, 711415, 1276314, 1644362],
+                    backgroundColor: ['#e0e0e0', '#90caf9', '#42a5f5', '#1565c0'],
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { callback: v => '₹' + (v/100000).toFixed(1) + 'L' }
+                    }
+                }
+            }
+        });
+
+        new Chart(document.getElementById('actionChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['RETRY_LATER', 'SEND_NOTIFICATION', 'STOP', 'SWITCH_METHOD', 'RETRY_NOW'],
+                datasets: [{
+                    data: [968, 957, 192, 8, 1],
+                    backgroundColor: ['#1565c0', '#42a5f5', '#ef5350', '#ffa726', '#66bb6a']
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,68 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# PayRecover AI — Git Ignore
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ── Environment secrets ────────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# ── Python ─────────────────────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+*.whl
+
+# ── Java / Maven ───────────────────────────────────────────────────────────────
+target/
+*.class
+*.jar
+*.war
+*.ear
+dependency-reduced-pom.xml
+.mvn/wrapper/maven-wrapper.jar
+
+# ── H2 Database Files ──────────────────────────────────────────────────────────
+*.h2.db
+*.mv.db
+*.trace.db
+
+# ── IDE ────────────────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.iml
+.project
+.classpath
+.settings/
+.factorypath
+*.swp
+*.swo
+*~
+
+# ── OS ─────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+ehthumbs.db
+
+# ── Logs ───────────────────────────────────────────────────────────────────────
+logs/
+*.log
+
+# ── Docker ─────────────────────────────────────────────────────────────────────
+# Keep Dockerfile and docker-compose.yml, ignore runtime data
+mysql-data/
+
+# ── Model artifacts (keep for demo, but note they're generated) ───────────────
+# Models are committed to enable running the demo without training.
+# To regenerate: cd ai-engine && python train_diagnosis.py && python train_recovery.py
+
+# ── Demo video (too large for git) ───────────────────────────────────────────
+demo-video.mp4

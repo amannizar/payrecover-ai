@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PayRecover AI — Audit Trail</title>
+    <link rel="stylesheet" th:href="@{/css/dashboard.css}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="brand"><span class="brand-icon">🛡️</span> PayRecover AI</div>
+        <div class="nav-links">
+            <a href="/">Dashboard</a>
+            <a href="/payments">Payments</a>
+            <a href="/evaluation">Evaluation</a>
+            <a href="/audit" class="active">Audit</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="page-header">
+            <h1>Audit Trail</h1>
+            <span class="badge">Every AI decision recorded</span>
+        </div>
+
+        <div class="card">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Payment ID</th>
+                        <th>Action</th>
+                        <th>Expected Recovery</th>
+                        <th>Result</th>
+                        <th>Recovered</th>
+                        <th>Stopping Reason</th>
+                    </tr>
+                </thead>
+                <tbody id="audit-body">
+                    <tr>
+                        <td colspan="7" class="empty-state">Loading audit logs…</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        fetch('/api/audit')
+            .then(r => r.json())
+            .then(data => {
+                const tbody = document.getElementById('audit-body');
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No audit logs yet. Execute a recovery on a payment to start generating logs.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = '';
+                data.forEach(log => {
+                    const time = log.createdAt ? new Date(log.createdAt).toLocaleTimeString() : '--:--:--';
+                    const resultClass = log.result === 'SUCCESS' ? 'badge-success' :
+                                       log.result === 'FAILED' ? 'badge-failed' : 'badge-stopped';
+                    tbody.innerHTML += '<tr>' +
+                        '<td>' + time + '</td>' +
+                        '<td class="mono"><a href="/payments/' + log.paymentId + '">' + log.paymentId + '</a></td>' +
+                        '<td><span class="badge-action">' + (log.action || '--') + '</span></td>' +
+                        '<td>₹' + (log.expectedRecovery || 0).toFixed(0) + '</td>' +
+                        '<td><span class="' + resultClass + '">' + (log.result || '--') + '</span></td>' +
+                        '<td>₹' + (log.recoveredAmount || 0).toFixed(0) + '</td>' +
+                        '<td>' + (log.stoppingReason || '—') + '</td>' +
+                    '</tr>';
+                });
+            })
+            .catch(() => {
+                document.getElementById('audit-body').innerHTML =
+                    '<tr><td colspan="7" class="empty-state">Could not load audit logs.</td></tr>';
+            });
+    </script>
+</body>
+</html>

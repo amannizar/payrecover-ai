@@ -1,0 +1,105 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# PayRecover AI — Docker Compose
+#
+# Usage:
+#   Development (H2):   docker compose up --build
+#   Production (MySQL): docker compose --profile prod up --build
+#
+# Architecture:
+#   Internet → Spring Boot (:8080) → FastAPI (:8001) → ML Models
+#                                  → MySQL (:3306)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+services:
+  # ── FastAPI AI Service ───────────────────────────────────────────────────────
+  fastapi:
+    build:
+      context: ./ai-engine
+      dockerfile: Dockerfile
+    container_name: payrecover-fastapi
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./ai-engine/models:/app/models
+    networks:
+      - payrecover-net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  # ── Spring Boot Backend ──────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: payrecover-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-dev}
+      - AI_SERVICE_URL=http://fastapi:8001
+      - PORT=8080
+      # Production DB (overridden by profile, but set for prod)
+      - DB_URL=${DB_URL:-jdbc:h2:mem:payrecover;DB_CLOSE_DELAY=-1;MODE=MYSQL}
+      - DB_DRIVER=${DB_DRIVER:-org.h2.Driver}
+      - DB_USERNAME=${DB_USERNAME:-sa}
+      - DB_PASSWORD=${DB_PASSWORD:-}
+      - JPA_PLATFORM=${JPA_PLATFORM:-org.hibernate.dialect.H2Dialect}
+      - JPA_DDL=${JPA_DDL:-create-drop}
+      - DEMO_RESET_ENABLED=${DEMO_RESET_ENABLED:-true}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - SHOW_SQL=${SHOW_SQL:-false}
+      - THYMELEAF_CACHE=${THYMELEAF_CACHE:-false}
+      - H2_CONSOLE=${H2_CONSOLE:-false}
+    depends_on:
+      fastapi:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+        required: false
+    networks:
+      - payrecover-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+  # ── MySQL (production only, activated with --profile prod) ────────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: payrecover-mysql
+    profiles:
+      - prod
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: payrecover
+      MYSQL_USER: ${DB_USERNAME:-payrecover}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-payrecover123}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - payrecover-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  mysql-data:
+    driver: local
+
+networks:
+  payrecover-net:
+    driver: bridge
